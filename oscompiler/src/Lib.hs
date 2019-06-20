@@ -2,8 +2,8 @@
 module Lib
     ( exprs
     , sexpr
-    , Sexpr
-    , Atom
+    , Sexpr(..)
+    , Atom(..)
     ) where
 
 import Text.Megaparsec

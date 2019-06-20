@@ -15,6 +15,7 @@ dependencies:
 - hspec
 - directory
 - HUnit
+- containers
 
 library:
   source-dirs: src
