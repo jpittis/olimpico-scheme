@@ -1,0 +1,1 @@
+[List [Atom (Symbol "defun"),Atom (Symbol "foobar"),List [Atom (Symbol "foo"),Atom (Symbol "bar")],List [Atom (Symbol "if"),List [Atom (Symbol "baz"),Atom (Symbol "foo"),Atom (Symbol "bar")],Atom (String "foo"),Atom (String "bar")]],List [Atom (Symbol "defvar"),Atom (Symbol "lol"),Atom (Integer 112)]]

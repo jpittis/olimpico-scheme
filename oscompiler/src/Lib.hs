@@ -2,6 +2,8 @@
 module Lib
     ( exprs
     , sexpr
+    , Sexpr
+    , Atom
     ) where
 
 import Text.Megaparsec
@@ -17,13 +19,13 @@ type Parser = Parsec Void Text
 data Sexpr =
     List [Sexpr]
   | Atom Atom
-  deriving (Show)
+  deriving (Show, Read, Eq)
 
 data Atom  =
     Integer Integer
   | String  Text
   | Symbol  Text
-  deriving (Show)
+  deriving (Show, Read, Eq)
 
 sc :: Parser ()
 sc = L.space space1 (L.skipLineComment ";") empty
