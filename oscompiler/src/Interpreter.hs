@@ -26,6 +26,7 @@ stdenv =
                             Sexpr . Atom . Integer $ max a b))
     , ("min", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
                             Sexpr. Atom . Integer $ min a b))
+    , ("begin", Func (\case args -> last args))
     ]
 
 data Value = Func Func | Sexpr Sexpr | Nil
