@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Interpreter
     ( hack
+    , hacks
     , Value(..)
     ) where
 
@@ -10,8 +11,9 @@ import Data.Map (Map)
 import Data.Text (Text)
 import Text.Megaparsec (parse)
 import Data.Either.Combinators (maybeToRight)
+import Control.Monad.State
 
-import Lib (Sexpr(..), Atom(..), sexpr)
+import Lib (Sexpr(..), Atom(..), sexpr, exprs)
 
 type Func = [Value] -> Value
 
@@ -26,27 +28,36 @@ stdenv =
                             Sexpr. Atom . Integer $ min a b))
     ]
 
-data Value = Func Func | Sexpr Sexpr
+data Value = Func Func | Sexpr Sexpr | Nil
 
 type Result = Either Text Value
 
-eval :: Env -> Sexpr -> Result
-eval env expr =
+eval :: Sexpr -> State Env Result
+eval expr =
   case expr of
-    Atom (Symbol s) -> maybeToRight "Unknown Symbol" (Map.lookup s env)
-    Atom (Integer i) -> Right . Sexpr $ Atom (Integer i)
+    Atom (Symbol s) ->
+      maybeToRight "Unknown Symbol" <$> gets (Map.lookup s)
+    Atom (Integer i) ->
+      return . Right . Sexpr $ Atom (Integer i)
     List [(Atom (Symbol "if")), test, consq, alt] ->
-      case eval env test of
-        Right s -> Right $ if truthy s then Sexpr consq else Sexpr alt
-        Left err -> Left err
-    -- TODO: Not stateful so this wont work without a state monad or similar.
-    -- List [(Atom (Symbol "define")), symbol, exp] ->
-    --   Map.insert symbol (eval exp env) env
+      eval test >>= \case
+        Right s -> return . Right $ if truthy s then Sexpr consq else Sexpr alt
+        Left err -> return $ Left err
+    List [(Atom (Symbol "define")), (Atom (Symbol symbol)), exp] -> do
+      eval expr >>= \case
+        Left err -> return $ Left err
+        Right val -> do
+          modify $ Map.insert symbol val
+          return . Right $ Nil
     List (fname : args) ->
-      case (eval env fname) of
-        Left err -> Left err
-        Right (Func f) -> f <$> mapM (eval env) args
-        Right _ -> Left "Can't apply non function."
+      eval fname >>= \case
+        Left err -> return $ Left err
+        Right (Func f) -> do -- return (f <$> mapM eval args)
+          fargs <- mapM eval args
+          case sequence fargs of
+            Left err -> return $ Left err
+            Right lol -> return . Right $ f lol
+        Right _ -> return $ Left "Can't apply non function."
 
 truthy :: Value -> Bool
 truthy _ = True
@@ -55,4 +66,10 @@ hack :: Text -> Result
 hack expr =
   case (parse sexpr "" expr) of
     Left _ -> Left "Parse Error"
-    Right parsed -> eval stdenv parsed
+    Right parsed -> evalState (eval parsed) stdenv
+
+hacks :: Text -> [Result]
+hacks expr =
+  case (parse exprs "" expr) of
+    Left _ -> [Left "Parse Error"]
+    Right parsed -> evalState (mapM eval parsed) stdenv
