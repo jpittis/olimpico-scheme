@@ -44,8 +44,8 @@ eval expr =
       eval test >>= \case
         Right s -> return . Right $ if truthy s then Sexpr consq else Sexpr alt
         Left err -> return $ Left err
-    List [(Atom (Symbol "define")), (Atom (Symbol symbol)), exp] -> do
-      eval expr >>= \case
+    List [(Atom (Symbol "define")), (Atom (Symbol symbol)), e] -> do
+      eval e >>= \case
         Left err -> return $ Left err
         Right val -> do
           modify $ Map.insert symbol val
