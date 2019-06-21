@@ -2,7 +2,6 @@
 {-# LANGUAGE LambdaCase #-}
 module Interpreter
     ( hack
-    , hacks
     , Value(..)
     , Env
     , stdenv
@@ -10,6 +9,7 @@ module Interpreter
 
 import qualified Data.Map as Map
 import Data.Map (Map)
+import qualified Data.Text as Text (unpack)
 import Data.Text (Text)
 import Text.Megaparsec (parse)
 import Data.Either.Combinators (maybeToRight)
@@ -45,8 +45,10 @@ eval expr =
   case expr of
     Atom (Symbol s) ->
       maybeToRight "Unknown Symbol" <$> gets (Map.lookup s)
-    Atom (Integer i) ->
-      return . Right . Sexpr $ Atom (Integer i)
+    Atom atom ->
+      return . Right . Sexpr . Atom $ atom
+    List [(Atom (Symbol "quote")), arg] ->
+      return . Right . Sexpr $ arg
     List [(Atom (Symbol "if")), test, consq, alt] ->
       eval test >>= \case
         Right s -> return . Right $ if truthy s then Sexpr consq else Sexpr alt
@@ -56,7 +58,15 @@ eval expr =
         Left err -> return $ Left err
         Right val -> do
           modify $ Map.insert symbol val
-          return . Right $ Nil
+          return $ Right val
+    List [(Atom (Symbol "set!")), (Atom (Symbol symbol)), e] ->
+      eval e >>= \case
+        Left err -> return $ Left err
+        Right val -> do
+          modify $ Map.insert symbol val
+          return $ Right val
+    List [(Atom (Symbol "lambda")), (List params), body] ->
+      return . Right . Func $ func params body
     List (fname : args) ->
       eval fname >>= \case
         Left err -> return $ Left err
@@ -67,6 +77,12 @@ eval expr =
             Right lol -> return . Right $ f lol
         Right _ -> return $ Left "Can't apply non function."
 
+func :: [Sexpr] -> Sexpr -> Func
+func params body =
+  \args -> case (evalState (eval body) stdenv) of
+    Left err -> error (Text.unpack err)
+    Right val -> val
+
 truthy :: Value -> Bool
 truthy _ = True
 
@@ -75,9 +91,3 @@ hack env expr =
   case (parse sexpr "" expr) of
     Left _ -> (Left "Parse Error", env)
     Right parsed -> runState (eval parsed) env
-
-hacks :: Text -> [Result]
-hacks expr =
-  case (parse exprs "" expr) of
-    Left _ -> [Left "Parse Error"]
-    Right parsed -> evalState (mapM eval parsed) stdenv
