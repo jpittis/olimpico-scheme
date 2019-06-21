@@ -16,6 +16,7 @@ dependencies:
 - directory
 - HUnit
 - containers
+- either
 
 library:
   source-dirs: src

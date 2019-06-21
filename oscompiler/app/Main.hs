@@ -17,7 +17,7 @@ repl = do
   hFlush stdout
   line <- Text.getLine
   case hack line of
-    Just (Func _)  -> print "some func"
-    Just (Sexpr s) -> print s
-    Nothing        -> print "error"
+    Right (Func  _) -> print "Some Func"
+    Right (Sexpr s) -> print s
+    Left err        -> print err
   repl
