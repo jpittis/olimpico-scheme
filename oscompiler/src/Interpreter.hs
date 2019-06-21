@@ -4,6 +4,8 @@ module Interpreter
     ( hack
     , hacks
     , Value(..)
+    , Env
+    , stdenv
     ) where
 
 import qualified Data.Map as Map
@@ -30,6 +32,11 @@ stdenv =
     ]
 
 data Value = Func Func | Sexpr Sexpr | Nil
+
+instance Show Value where
+  show (Sexpr s) = show s
+  show Nil       = "Nil"
+  show (Func _)  = "Func"
 
 type Result = Either Text Value
 
@@ -63,11 +70,11 @@ eval expr =
 truthy :: Value -> Bool
 truthy _ = True
 
-hack :: Text -> Result
-hack expr =
+hack :: Env -> Text -> (Result, Env)
+hack env expr =
   case (parse sexpr "" expr) of
-    Left _ -> Left "Parse Error"
-    Right parsed -> evalState (eval parsed) stdenv
+    Left _ -> (Left "Parse Error", env)
+    Right parsed -> runState (eval parsed) env
 
 hacks :: Text -> [Result]
 hacks expr =

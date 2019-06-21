@@ -9,15 +9,15 @@ import Lib
 import Interpreter
 
 main :: IO ()
-main = repl
+main = repl stdenv
 
-repl :: IO ()
-repl = do
+repl :: Env -> IO ()
+repl env = do
   Text.putStr "osi> "
   hFlush stdout
   line <- Text.getLine
-  case hack line of
-    Right (Func  _) -> print "Some Func"
-    Right (Sexpr s) -> print s
-    Left err        -> print err
-  repl
+  let (result, env2) = hack env line
+  case result of
+    Right value -> print value
+    Left err -> print err
+  repl env2
