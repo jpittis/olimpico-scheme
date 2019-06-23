@@ -86,7 +86,7 @@ eval expr =
         Right val -> do
           modify (setdefine symbol val)
           return $ Right val
-    List [(Atom (Symbol "set!")), (Atom (Symbol symbol)), e] ->
+    List [(Atom (Symbol "set")), (Atom (Symbol symbol)), e] ->
       eval e >>= \case
         Left err -> return $ Left err
         Right val -> do
