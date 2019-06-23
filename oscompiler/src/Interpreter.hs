@@ -44,6 +44,20 @@ find s env =
     Just val -> Just val
     Nothing  -> eOuter env >>= find s
 
+setbang :: Text -> Value -> Env -> Env
+setbang s v env = do
+  case Map.member s (eLookup env) of
+    True  -> setdefine s v env
+    False ->
+      case eOuter env of
+        Nothing -> setdefine s v env
+        Just outer ->
+          env { eOuter = Just $ setbang s v outer }
+
+setdefine :: Text -> Value -> Env -> Env
+setdefine s v env =
+  env { eLookup = Map.insert s v (eLookup env) }
+
 data Value = Func Func | Sexpr Sexpr | Nil
 
 instance Show Value where
@@ -70,15 +84,13 @@ eval expr =
       eval e >>= \case
         Left err -> return $ Left err
         Right val -> do
-          modify $ \env -> env { eLookup = Map.insert symbol val (eLookup env) }
+          modify (setdefine symbol val)
           return $ Right val
     List [(Atom (Symbol "set!")), (Atom (Symbol symbol)), e] ->
       eval e >>= \case
         Left err -> return $ Left err
         Right val -> do
-          -- TODO: set! should only edit existing environment or top level
-          -- doing a recursive modify on Env sounds like a pain though
-          modify $ \env -> env { eLookup = Map.insert symbol val (eLookup env) }
+          modify (setbang symbol val)
           return $ Right val
     List [(Atom (Symbol "lambda")), (List params), body] ->
       return . Right . Func $ func params body
@@ -93,14 +105,18 @@ eval expr =
         Right _ -> return $ Left "Can't apply non function."
 
 func :: [Sexpr] -> Sexpr -> Func
-func params body =
-  \args -> case (evalState (eval body) stdenv) of
-    Left err  -> error (Text.unpack err)
-    Right val -> return $ val
-  -- TODO
-  -- where
-  --   buldenv :: [Sexpr] -> [Sexpr] -> Env -> Env
-  --   buildenv params args env =
+func params body = do
+  \args -> do
+    env <- get
+    case evalState (eval body) (buildenv params args env)  of
+      Left err -> error (Text.unpack err)
+      Right val -> return $ val
+  where
+    buildenv :: [Sexpr] -> [Value] -> Env -> Env
+    buildenv params args outer =
+      Env { eLookup = buildlookup params args, eOuter = Just outer }
+    buildlookup :: [Sexpr] -> [Value] -> Map Text Value
+    buildlookup params args = Map.empty
 
 truthy :: Value -> Bool
 truthy _ = True
