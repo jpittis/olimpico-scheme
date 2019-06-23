@@ -17,19 +17,32 @@ import Control.Monad.State
 
 import Lib (Sexpr(..), Atom(..), sexpr, exprs)
 
-type Func = [Value] -> Value
+type Func = [Value] -> State Env Value
 
-type Env = Map Text Value
+data Env = Env
+  { eLookup :: Map Text Value
+  , eOuter  :: Maybe Env
+  }
 
 stdenv :: Env
 stdenv =
-  Map.fromList
-    [ ("max", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
-                            Sexpr . Atom . Integer $ max a b))
-    , ("min", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
-                            Sexpr. Atom . Integer $ min a b))
-    , ("begin", Func (\case args -> last args))
-    ]
+  Env { eLookup = lookup, eOuter = Nothing }
+  where
+    lookup :: Map Text Value
+    lookup =
+      Map.fromList
+        [ ("max", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
+                                return .Sexpr . Atom . Integer $ max a b))
+        , ("min", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
+                                return . Sexpr. Atom . Integer $ min a b))
+        , ("begin", Func (\case args -> return $ last args))
+        ]
+
+find :: Text -> Env -> Maybe Value
+find s env =
+  case Map.lookup s (eLookup env) of
+    Just val -> Just val
+    Nothing  -> eOuter env >>= find s
 
 data Value = Func Func | Sexpr Sexpr | Nil
 
@@ -44,7 +57,7 @@ eval :: Sexpr -> State Env Result
 eval expr =
   case expr of
     Atom (Symbol s) ->
-      maybeToRight "Unknown Symbol" <$> gets (Map.lookup s)
+      maybeToRight "Unknown Symbol" <$> gets (find s)
     Atom atom ->
       return . Right . Sexpr . Atom $ atom
     List [(Atom (Symbol "quote")), arg] ->
@@ -57,31 +70,37 @@ eval expr =
       eval e >>= \case
         Left err -> return $ Left err
         Right val -> do
-          modify $ Map.insert symbol val
+          modify $ \env -> env { eLookup = Map.insert symbol val (eLookup env) }
           return $ Right val
     List [(Atom (Symbol "set!")), (Atom (Symbol symbol)), e] ->
       eval e >>= \case
         Left err -> return $ Left err
         Right val -> do
-          modify $ Map.insert symbol val
+          -- TODO: set! should only edit existing environment or top level
+          -- doing a recursive modify on Env sounds like a pain though
+          modify $ \env -> env { eLookup = Map.insert symbol val (eLookup env) }
           return $ Right val
     List [(Atom (Symbol "lambda")), (List params), body] ->
       return . Right . Func $ func params body
     List (fname : args) ->
       eval fname >>= \case
         Left err -> return $ Left err
-        Right (Func f) -> do -- return (f <$> mapM eval args)
+        Right (Func f) -> do
           fargs <- mapM eval args
           case sequence fargs of
             Left err -> return $ Left err
-            Right lol -> return . Right $ f lol
+            Right lol -> Right <$> f lol
         Right _ -> return $ Left "Can't apply non function."
 
 func :: [Sexpr] -> Sexpr -> Func
 func params body =
   \args -> case (evalState (eval body) stdenv) of
-    Left err -> error (Text.unpack err)
-    Right val -> val
+    Left err  -> error (Text.unpack err)
+    Right val -> return $ val
+  -- TODO
+  -- where
+  --   buldenv :: [Sexpr] -> [Sexpr] -> Env -> Env
+  --   buildenv params args env =
 
 truthy :: Value -> Bool
 truthy _ = True
