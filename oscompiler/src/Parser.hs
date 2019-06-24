@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lib
+module Parser
     ( exprs
     , sexpr
     , Sexpr(..)

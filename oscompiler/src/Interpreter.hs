@@ -15,7 +15,7 @@ import Text.Megaparsec (parse)
 import Data.Either.Combinators (maybeToRight)
 import Control.Monad.State
 
-import Lib (Sexpr(..), Atom(..), sexpr, exprs)
+import Parser (Sexpr(..), Atom(..), sexpr, exprs)
 
 type Func = [Value] -> State Env Value
 

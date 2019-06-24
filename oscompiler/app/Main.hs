@@ -5,7 +5,7 @@ import qualified Data.Text.IO as Text (getLine, putStr)
 import System.IO (hFlush, stdout)
 import Text.Megaparsec (parseTest)
 
-import Lib
+import Parser
 import Interpreter
 
 main :: IO ()

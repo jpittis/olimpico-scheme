@@ -8,7 +8,7 @@ import Data.Void (Void)
 import System.Directory (doesFileExist)
 import qualified Text.Read as Text (read)
 
-import Lib
+import Parser
 
 main :: IO ()
 main = hspec $ do
