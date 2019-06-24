@@ -34,12 +34,16 @@ stdenv =
         [ ("max", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
                                 return .Sexpr . Atom . Integer $ max a b))
         , ("min", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
-                                return . Sexpr. Atom . Integer $ min a b))
+                                return . Sexpr . Atom . Integer $ min a b))
         , ("begin", Func (\case args -> return $ last args))
         , ("+", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
                                 return . Sexpr . Atom . Integer $ a + b))
         , ("-", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
                                 return . Sexpr . Atom . Integer $ a - b))
+        , ("nil", Nil)
+        , ("t", T)
+        , ("<", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
+                                return (if a < b then T else Nil)))
         ]
 
 find :: Text -> Env -> Maybe Value
@@ -62,12 +66,13 @@ setdefine :: Text -> Value -> Env -> Env
 setdefine s v env =
   env { eLookup = Map.insert s v (eLookup env) }
 
-data Value = Func Func | Sexpr Sexpr | Nil
+data Value = Func Func | Sexpr Sexpr | Nil | T
 
 instance Show Value where
   show (Sexpr s) = show s
   show Nil       = "Nil"
   show (Func _)  = "Func"
+  show T         = "T"
 
 type Result = Either Text Value
 
@@ -82,7 +87,7 @@ eval expr =
       return . Right . Sexpr $ arg
     List [(Atom (Symbol "if")), test, consq, alt] ->
       eval test >>= \case
-        Right s -> return . Right $ if truthy s then Sexpr consq else Sexpr alt
+        Right s -> eval (if truthy s then consq else alt)
         Left err -> return $ Left err
     List [(Atom (Symbol "define")), (Atom (Symbol symbol)), e] -> do
       eval e >>= \case
@@ -128,7 +133,7 @@ func params body = do
 
 truthy :: Value -> Bool
 truthy Nil = False
-truthy _ = True
+truthy _   = True
 
 hack :: Env -> Text -> (Result, Env)
 hack env expr =
