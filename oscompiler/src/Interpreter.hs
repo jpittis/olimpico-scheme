@@ -9,7 +9,7 @@ module Interpreter
 
 import qualified Data.Map as Map
 import Data.Map (Map)
-import qualified Data.Text as Text (unpack)
+import qualified Data.Text as Text (unpack, pack)
 import Data.Text (Text)
 import Text.Megaparsec (parse)
 import Data.Either.Combinators (maybeToRight)
@@ -36,6 +36,10 @@ stdenv =
         , ("min", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
                                 return . Sexpr. Atom . Integer $ min a b))
         , ("begin", Func (\case args -> return $ last args))
+        , ("+", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
+                                return . Sexpr . Atom . Integer $ a + b))
+        , ("-", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
+                                return . Sexpr . Atom . Integer $ a - b))
         ]
 
 find :: Text -> Env -> Maybe Value
@@ -71,7 +75,7 @@ eval :: Sexpr -> State Env Result
 eval expr =
   case expr of
     Atom (Symbol s) ->
-      maybeToRight "Unknown Symbol" <$> gets (find s)
+      maybeToRight (Text.pack . show $ ("unknown symbol", s)) <$> gets (find s)
     Atom atom ->
       return . Right . Sexpr . Atom $ atom
     List [(Atom (Symbol "quote")), arg] ->
@@ -116,7 +120,11 @@ func params body = do
     buildenv params args outer =
       Env { eLookup = buildlookup params args, eOuter = Just outer }
     buildlookup :: [Sexpr] -> [Value] -> Map Text Value
-    buildlookup params args = Map.empty
+    buildlookup params args = Map.fromList . mapToEnv $ (zip params args)
+    mapToEnv :: [(Sexpr, Value)] -> [(Text, Value)]
+    mapToEnv = map mapToTxt
+    mapToTxt :: (Sexpr, Value) -> (Text, Value)
+    mapToTxt ((Atom (Symbol s)), v) = (s, v)
 
 truthy :: Value -> Bool
 truthy _ = True

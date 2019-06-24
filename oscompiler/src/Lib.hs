@@ -36,7 +36,7 @@ lexeme = L.lexeme sc
 atom :: Parser Atom
 atom =
       Integer <$> L.decimal
-  <|> Symbol . Text.pack <$> some letterChar
+  <|> Symbol . Text.pack <$> some (letterChar <|> symbolChar)
   <|> String <$> quotedString
 
 quotedString :: Parser Text
