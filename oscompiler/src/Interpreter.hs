@@ -127,6 +127,7 @@ func params body = do
     mapToTxt ((Atom (Symbol s)), v) = (s, v)
 
 truthy :: Value -> Bool
+truthy Nil = False
 truthy _ = True
 
 hack :: Env -> Text -> (Result, Env)
