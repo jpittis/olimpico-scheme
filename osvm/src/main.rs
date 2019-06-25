@@ -3,8 +3,8 @@ extern crate num;
 extern crate num_derive;
 
 use std::collections::HashMap;
-use std::fmt::{self};
 use std::convert::TryInto;
+use std::fmt::{self};
 
 #[repr(u64)]
 #[derive(FromPrimitive, Debug)]
@@ -65,6 +65,7 @@ impl Interpreter {
 
     fn run(&mut self, chunk: &Chunk) {
         loop {
+            // println!("{:04X?}\t{:?}", self.ip, self.stack.last());
             match num::FromPrimitive::from_u64(chunk[self.ip]) {
                 Some(OpCode::Return) => {
                     let result = self.stack.pop().unwrap();
@@ -102,7 +103,7 @@ impl Interpreter {
                         Value::Const(two) => two,
                         _ => panic!("expected const"),
                     };
-                    self.stack.push(Value::Const(one - two));
+                    self.stack.push(Value::Const(two - one));
                     self.ip += 1;
                 }
                 Some(OpCode::Mul) => {
@@ -150,7 +151,8 @@ impl Interpreter {
                         Value::Const(two) => two,
                         _ => panic!("expected const"),
                     };
-                    self.stack.push(Value::Const(if one == two { 0 } else { 1 }));
+                    self.stack
+                        .push(Value::Const(if one == two { 1 } else { 0 }));
                     self.ip += 1;
                 }
                 Some(OpCode::Apply) => {
@@ -163,7 +165,7 @@ impl Interpreter {
                     self.stack.push(Value::Env(Box::new(self.env.clone())));
                     self.ip = (closure.code as usize).try_into().unwrap();
                     self.env = closure.env.clone();
-                    self.stack.push(arg);
+                    self.env.insert(0, arg);
                 }
                 Some(OpCode::Stop) => return,
                 Some(OpCode::Const) => {
@@ -189,7 +191,7 @@ impl Interpreter {
                         _ => panic!("expected const"),
                     };
                     if arg == 0 {
-                        self.ip = (chunk[self.ip+1] as usize).try_into().unwrap();
+                        self.ip = (chunk[self.ip + 1] as usize).try_into().unwrap();
                     } else {
                         self.ip += 2;
                     }
@@ -247,42 +249,77 @@ fn main() {
 
     // Entry Point
     chunk.push(OpCode::Closure as u64);
-    chunk.push(9);
+    chunk.push(0x0006);
     chunk.push(OpCode::Const as u64);
-    chunk.push(8);
+    chunk.push(20);
     chunk.push(OpCode::Apply as u64);
-    chunk.push(OpCode::Const as u64);
-    chunk.push(10);
-    chunk.push(OpCode::Mul as u64);
     chunk.push(OpCode::Stop as u64);
 
-    // Fuction
+    // Fib
+    // If arg is 0, return 0
+    chunk.push(OpCode::Access as u64);
+    chunk.push(0);
     chunk.push(OpCode::Const as u64);
-    chunk.push(3);
-    chunk.push(OpCode::Add as u64);
+    chunk.push(0);
+    chunk.push(OpCode::Equal as u64);
+    chunk.push(OpCode::Jump as u64);
+    chunk.push(0x0010);
+    chunk.push(OpCode::Const as u64);
+    chunk.push(0);
+    chunk.push(OpCode::Return as u64);
+    // If arg is 1, return r1
+    chunk.push(OpCode::Access as u64);
+    chunk.push(0);
+    chunk.push(OpCode::Const as u64);
+    chunk.push(1);
+    chunk.push(OpCode::Equal as u64);
+    chunk.push(OpCode::Jump as u64);
+    chunk.push(0x001A);
+    chunk.push(OpCode::Const as u64);
+    chunk.push(1);
+    chunk.push(OpCode::Return as u64);
+    // Call fib with arg sub 1
+    chunk.push(OpCode::Closure as u64);
+    chunk.push(0x0006);
+    chunk.push(OpCode::Access as u64);
+    chunk.push(0);
+    chunk.push(OpCode::Const as u64);
+    chunk.push(1);
+    chunk.push(OpCode::Sub as u64);
+    chunk.push(OpCode::Apply as u64);
+    // Call fib with arg sub 2
+    chunk.push(OpCode::Closure as u64);
+    chunk.push(0x0006);
+    chunk.push(OpCode::Access as u64);
+    chunk.push(0);
     chunk.push(OpCode::Const as u64);
     chunk.push(2);
-    chunk.push(OpCode::Const as u64);
-    chunk.push(8);
-    chunk.push(OpCode::Add as u64);
+    chunk.push(OpCode::Sub as u64);
+    chunk.push(OpCode::Apply as u64);
+    // Add and return
     chunk.push(OpCode::Add as u64);
     chunk.push(OpCode::Return as u64);
 
-    println!("======= Chunk =======");
-    dissasemble_chunk(&chunk);
+    if std::env::args().len() == 2 {
+        println!("======== Run ========");
+        let mut vm = Interpreter::new();
+        vm.run(&chunk);
 
-    let mut vm = Interpreter::new();
-    vm.run(&chunk);
-
-    println!("======= Stack =======");
-    for value in vm.stack {
-        println!("{:?}", value);
-    }
-    if vm.env.len() > 0 {
-        println!("======== Env ========");
-        for (key, value) in vm.env {
-            println!("{:?}\t{:?}", key, value);
+        println!("======= Stack =======");
+        for value in vm.stack {
+            println!("{:?}", value);
         }
+
+        if vm.env.len() > 0 {
+            println!("======== Env ========");
+            for (key, value) in vm.env {
+                println!("{:?}\t{:?}", key, value);
+            }
+        }
+        println!("=====================");
+    } else {
+        println!("======= Chunk =======");
+        dissasemble_chunk(&chunk);
+        println!("=====================");
     }
-    println!("=====================");
 }
