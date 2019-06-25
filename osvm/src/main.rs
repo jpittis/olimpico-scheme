@@ -4,6 +4,7 @@ extern crate num_derive;
 
 use std::collections::HashMap;
 use std::fmt::{self};
+use std::convert::TryInto;
 
 #[repr(u64)]
 #[derive(FromPrimitive, Debug)]
@@ -19,6 +20,8 @@ enum OpCode {
     Apply,
     Return,
     Stop,
+    Jump,
+    Equal,
 }
 
 impl fmt::Display for OpCode {
@@ -31,7 +34,7 @@ type Env = HashMap<u64, Value>;
 
 #[derive(Debug, Clone)]
 struct Closure {
-    code: usize,
+    code: u64,
     env: Env,
 }
 
@@ -138,6 +141,18 @@ impl Interpreter {
                     self.stack.push(Value::Const(one % two));
                     self.ip += 1;
                 }
+                Some(OpCode::Equal) => {
+                    let one = match self.stack.pop().unwrap() {
+                        Value::Const(one) => one,
+                        _ => panic!("expected const"),
+                    };
+                    let two = match self.stack.pop().unwrap() {
+                        Value::Const(two) => two,
+                        _ => panic!("expected const"),
+                    };
+                    self.stack.push(Value::Const(if one == two { 0 } else { 1 }));
+                    self.ip += 1;
+                }
                 Some(OpCode::Apply) => {
                     let arg = self.stack.pop().unwrap();
                     let closure = match self.stack.pop().unwrap() {
@@ -146,7 +161,7 @@ impl Interpreter {
                     };
                     self.stack.push(Value::IP(self.ip + 1));
                     self.stack.push(Value::Env(Box::new(self.env.clone())));
-                    self.ip = closure.code;
+                    self.ip = (closure.code as usize).try_into().unwrap();
                     self.env = closure.env.clone();
                     self.stack.push(arg);
                 }
@@ -162,13 +177,24 @@ impl Interpreter {
                 }
                 Some(OpCode::Closure) => {
                     let closure = Box::new(Closure {
-                        code: chunk[self.ip + 1] as usize,
+                        code: chunk[self.ip + 1],
                         env: self.env.clone(),
                     });
                     self.stack.push(Value::Closure(closure));
                     self.ip += 2;
                 }
-                _ => unimplemented!(),
+                Some(OpCode::Jump) => {
+                    let arg = match self.stack.pop().unwrap() {
+                        Value::Const(one) => one,
+                        _ => panic!("expected const"),
+                    };
+                    if arg == 0 {
+                        self.ip = (chunk[self.ip+1] as usize).try_into().unwrap();
+                    } else {
+                        self.ip += 2;
+                    }
+                }
+                None => panic!("unknown instruction {}", chunk[self.ip]),
             }
         }
     }
@@ -191,10 +217,12 @@ fn dissasemble_intruction(chunk: &Chunk, offset: usize) -> usize {
         Some(i @ OpCode::Mul) => simple_instruction(i, offset),
         Some(i @ OpCode::Mod) => simple_instruction(i, offset),
         Some(i @ OpCode::Apply) => simple_instruction(i, offset),
+        Some(i @ OpCode::Equal) => simple_instruction(i, offset),
         Some(i @ OpCode::Stop) => simple_instruction(i, offset),
         Some(i @ OpCode::Const) => one_word_instruction(i, offset, chunk),
         Some(i @ OpCode::Access) => one_word_instruction(i, offset, chunk),
         Some(i @ OpCode::Closure) => one_word_instruction(i, offset, chunk),
+        Some(i @ OpCode::Jump) => one_word_instruction(i, offset, chunk),
         None => panic!("unknown instruction {}", chunk[offset]),
     }
 }
