@@ -200,7 +200,7 @@ fn dissasemble_intruction(chunk: &Chunk, offset: usize) -> usize {
 }
 
 fn simple_instruction(op: OpCode, offset: usize) -> usize {
-    println!("{:04X?}\t{}", offset, op.to_string());
+    println!("{:04X?}\t{}", offset, op.to_string().to_uppercase());
     return offset + 1;
 }
 
@@ -208,7 +208,7 @@ fn one_word_instruction(op: OpCode, offset: usize, chunk: &Chunk) -> usize {
     println!(
         "{:04X?}\t{}\t{:04X?}",
         offset,
-        op.to_string(),
+        op.to_string().to_uppercase(),
         chunk[offset + 1]
     );
     return offset + 2;
@@ -216,6 +216,8 @@ fn one_word_instruction(op: OpCode, offset: usize, chunk: &Chunk) -> usize {
 
 fn main() {
     let mut chunk = Chunk::new();
+
+    // Entry Point
     chunk.push(OpCode::Closure as u64);
     chunk.push(9);
     chunk.push(OpCode::Const as u64);
@@ -226,6 +228,7 @@ fn main() {
     chunk.push(OpCode::Mul as u64);
     chunk.push(OpCode::Stop as u64);
 
+    // Fuction
     chunk.push(OpCode::Const as u64);
     chunk.push(3);
     chunk.push(OpCode::Add as u64);
@@ -236,8 +239,22 @@ fn main() {
     chunk.push(OpCode::Add as u64);
     chunk.push(OpCode::Add as u64);
     chunk.push(OpCode::Return as u64);
+
+    println!("======= Chunk =======");
     dissasemble_chunk(&chunk);
+
     let mut vm = Interpreter::new();
     vm.run(&chunk);
-    println!("result: {:?}", vm.stack.pop());
+
+    println!("======= Stack =======");
+    for value in vm.stack {
+        println!("{:?}", value);
+    }
+    if vm.env.len() > 0 {
+        println!("======== Env ========");
+        for (key, value) in vm.env {
+            println!("{:?}\t{:?}", key, value);
+        }
+    }
+    println!("=====================");
 }
