@@ -65,9 +65,12 @@ fn main() {
     chunk.push(Op::Return as Word);
 
     if std::env::args().len() == 2 {
+        let args: Vec<String> = std::env::args().collect();
+        let debug = args[1] == "debug";
+
         println!("======== Run ========");
-        let mut vm = Interpreter::new();
-        vm.run(&chunk);
+        let mut vm = Interpreter::new(chunk);
+        vm.execute_all(debug);
 
         println!("======= Stack =======");
         for value in vm.stack {
