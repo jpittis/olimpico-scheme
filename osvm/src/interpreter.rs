@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::convert::TryInto;
 
 use super::bytecode::{Chunk, Op, Word};
 
@@ -7,16 +6,16 @@ pub type Env = HashMap<Word, Value>;
 
 #[derive(Debug, Clone)]
 pub struct Closure {
-    code: u64,
+    code: usize,
     env: Env,
 }
 
 #[derive(Debug, Clone)]
 pub enum Value {
-    Const(u64),
+    Const(Word),
     Closure(Box<Closure>),
     Env(Box<Env>),
-    IP(usize),
+    IP(Word),
 }
 
 pub struct Interpreter {
@@ -37,7 +36,7 @@ impl Interpreter {
     pub fn run(&mut self, chunk: &Chunk) {
         loop {
             // println!("{:04X?}\t{:?}", self.ip, self.stack.last());
-            match num::FromPrimitive::from_u64(chunk[self.ip]) {
+            match num::FromPrimitive::from_usize(chunk[self.ip]) {
                 Some(Op::Return) => {
                     let result = self.stack.pop().unwrap();
                     let env = match self.stack.pop().unwrap() {
@@ -134,7 +133,7 @@ impl Interpreter {
                     };
                     self.stack.push(Value::IP(self.ip + 1));
                     self.stack.push(Value::Env(Box::new(self.env.clone())));
-                    self.ip = (closure.code as usize).try_into().unwrap();
+                    self.ip = closure.code;
                     self.env = closure.env.clone();
                     self.env.insert(0, arg);
                 }
@@ -162,7 +161,7 @@ impl Interpreter {
                         _ => panic!("expected const"),
                     };
                     if arg == 0 {
-                        self.ip = (chunk[self.ip + 1] as usize).try_into().unwrap();
+                        self.ip = chunk[self.ip + 1];
                     } else {
                         self.ip += 2;
                     }

@@ -1,6 +1,6 @@
 use std::fmt::{self};
 
-#[repr(u64)]
+#[repr(usize)]
 #[derive(FromPrimitive, Debug)]
 pub enum Op {
     Return,
@@ -42,7 +42,7 @@ impl fmt::Display for Op {
     }
 }
 
-pub type Word = u64;
+pub type Word = usize;
 
 pub type Chunk = Vec<Word>;
 
@@ -54,7 +54,7 @@ pub fn dissasemble_chunk(chunk: &Chunk) {
 }
 
 fn dissasemble_next(chunk: &Chunk, offset: usize) -> usize {
-    match num::FromPrimitive::from_u64(chunk[offset]) {
+    match num::FromPrimitive::from_usize(chunk[offset]) {
         Some(op) => dissasemble_args(op, chunk, offset),
         None => panic!("unknown instruction {}", chunk[offset]),
     }
