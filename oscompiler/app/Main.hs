@@ -1,17 +1,28 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified Data.Text.IO as Text (getLine, putStr)
+import qualified Data.Text.IO as Text (getLine, putStr, readFile)
 import System.IO (hFlush, stdout)
 import Text.Megaparsec (parseTest)
 import System.CPUTime
 import Text.Printf
+import System.Environment
 
 import Parser
 import Interpreter
+import Assembler
 
 main :: IO ()
-main = repl stdenv
+-- main = repl stdenv
+main = assembler
+
+assembler :: IO ()
+assembler = do
+  [filename] <- getArgs
+  input <- Text.readFile filename
+  let asm = (assemble input)
+  print asm
+  return ()
 
 repl :: Env -> IO ()
 repl env = do

@@ -9,7 +9,6 @@ module Parser
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-import Control.Monad.Identity (Identity)
 import Data.Void (Void)
 import Data.Text (Text)
 import qualified Data.Text as Text (pack)
