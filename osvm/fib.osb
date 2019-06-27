@@ -1,32 +1,31 @@
 @start
   closure fib
-  const   30
+  const 30
   apply
   stop
-
-@fib_0:
-  access  0
-  const   0
+@fib0
+  access 0
+  const 0
   equal
-  jump    fib_1
-  const   0
+  jump fib1
+  const 0
   return
-@fib_1:
-  access  0
-  const   1
+@fib1
+  access 0
+  const 1
   equal
-  jump    fib_2
-  const   1
+  jump fib2
+  const 1
   return
-@fib_2:
+@fib2
   closure fib
-  access  0
-  const   1
+  access 0
+  const 1
   sub
   apply
   closure fib
-  access  0
-  const   2
+  access 0
+  const 2
   sub
   apply
   add

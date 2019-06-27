@@ -20,9 +20,24 @@ assembler :: IO ()
 assembler = do
   [filename] <- getArgs
   input <- Text.readFile filename
-  let asm = (assemble input)
-  print asm
-  return ()
+  case assemble input of
+    Left err  -> print err
+    Right asm -> mapM ppAssembler asm >> return ()
+
+ppAssembler :: Assembler -> IO ()
+ppAssembler (Labell str) = printf "@%s\n" str
+ppAssembler (Inst inst) = case inst of
+  Closure str -> printf "  closure %s\n" str
+  Const int -> printf "  const %d\n" int
+  Apply -> printf "  apply\n"
+  Stop -> printf "  stop\n"
+  Access int -> printf "  access %d\n" int
+  Equal -> printf "  equal\n"
+  Jump str -> printf "  jump %s\n" str
+  Return -> printf "  return\n"
+  Sub -> printf "  sub\n"
+  Add -> printf "  add\n"
+  
 
 repl :: Env -> IO ()
 repl env = do

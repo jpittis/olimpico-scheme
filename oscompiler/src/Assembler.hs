@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Assembler
     ( assemble
+    , progn
     , Assembler(..)
     , Inst(..)
     ) where
@@ -15,18 +16,18 @@ import qualified Data.Text as Text (pack)
 type Parser = Parsec Void Text
 
 data Assembler =
-    Labell String
+    Labell Text
   | Inst Inst
   deriving (Show)
 
 data Inst =
-    Closure String
+    Closure Text
   | Const Integer
   | Apply
   | Stop
   | Access Integer
   | Equal
-  | Jump String
+  | Jump Text
   | Return
   | Sub
   | Add
@@ -45,19 +46,22 @@ assembler :: Parser Assembler
 assembler = do
   asm <- Labell <$> labell <|> Inst <$> inst
   newline
+  sc
   return asm
 
-labell :: Parser String
-labell = char '@' >> some letterChar
+labell :: Parser Text
+labell = char '@' >> alphaNumText
+
+alphaNumText = Text.pack <$> some alphaNumChar
 
 inst :: Parser Inst
-inst = Closure <$> (string "closure" >> space1 >> some letterChar)
-  <|> Const <$> (string "const" >> L.decimal)
+inst = Closure <$> (string "closure" >> space1 >> alphaNumText)
+  <|> Const <$> (string "const" >> space1 >> L.decimal)
   <|> (string "apply" >> return Apply)
   <|> (string "stop" >> return Stop)
-  <|> Access <$> (string "access" >> L.decimal)
+  <|> Access <$> (string "access" >> space1 >> L.decimal)
   <|> (string "equal" >> return Equal)
-  <|> Jump <$> (string "jump" >> some letterChar)
+  <|> Jump <$> (string "jump" >> space1 >> alphaNumText)
   <|> (string "return" >> return Return)
   <|> (string "sub" >> return Sub)
   <|> (string "add" >> return Add)
