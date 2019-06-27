@@ -5,6 +5,8 @@ extern crate num_derive;
 mod bytecode;
 mod interpreter;
 
+use std::time::{Instant};
+
 use bytecode::{dissasemble_chunk, Chunk, Op, Word};
 use interpreter::Interpreter;
 
@@ -15,7 +17,7 @@ fn main() {
     chunk.push(Op::Closure as Word);
     chunk.push(0x0006);
     chunk.push(Op::Const as Word);
-    chunk.push(20);
+    chunk.push(30);
     chunk.push(Op::Apply as Word);
     chunk.push(Op::Stop as Word);
 
@@ -70,7 +72,11 @@ fn main() {
 
         println!("======== Run ========");
         let mut vm = Interpreter::new(chunk);
+
+        let now = Instant::now();
         vm.execute_all(debug);
+        let duration = now.elapsed();
+        println!("Duration: {:?}", duration);
 
         println!("======= Stack =======");
         for value in vm.stack {
