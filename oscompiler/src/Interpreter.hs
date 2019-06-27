@@ -44,6 +44,8 @@ stdenv =
         , ("t", T)
         , ("<", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
                                 return (if a < b then T else Nil)))
+        , ("=", Func (\case [Sexpr (Atom (Integer a)), Sexpr (Atom (Integer b))] ->
+                                return (if a == b then T else Nil)))
         ]
 
 find :: Text -> Env -> Maybe Value
