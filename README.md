@@ -1,4 +1,15 @@
-Just toying around with Lisp, compilers, interpreters, Haskell and Rust!
+Just toying around with Lisp, compilers, interpreters, Haskell and Rust! The
+code quality is pretty terrible but I'm having lots of fun!
+
+## Done
+
+- Lisp tree walk interpreter.
+- Bytecode VM.
+- Assembler for bytecode VM.
+
+## Todo
+
+- Lisp compiler to bytecode.
 
 ## Relative Performance
 
