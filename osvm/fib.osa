@@ -1,0 +1,32 @@
+@start
+  closure fib0
+  const 30
+  apply
+  stop
+@fib0
+  access 0
+  const 0
+  equal
+  jump fib1
+  const 0
+  return
+@fib1
+  access 0
+  const 1
+  equal
+  jump fib2
+  const 1
+  return
+@fib2
+  closure fib0
+  access 0
+  const 1
+  sub
+  apply
+  closure fib0
+  access 0
+  const 2
+  sub
+  apply
+  add
+  return

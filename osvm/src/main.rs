@@ -1,16 +1,30 @@
 extern crate num;
 #[macro_use]
 extern crate num_derive;
+extern crate byteorder;
 
 mod bytecode;
 mod interpreter;
 
+use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
 use std::time::Instant;
 
 use bytecode::{dissasemble_chunk, Chunk, Op, Word};
 use interpreter::Interpreter;
 
-fn main() {
+fn main() -> io::Result<()> {
+    let mut f = File::open("fib.osb")?;
+    let mut buffer = Vec::new();
+    f.read_to_end(&mut buffer)?;
+
+    let mut chunk_from_file = Chunk::new();
+    for i in (0..buffer.len()).step_by(8) {
+        chunk_from_file.push(BigEndian::read_u64(&buffer[i..]) as usize);
+    }
+
     let mut chunk = Chunk::new();
 
     // Entry Point
@@ -66,6 +80,9 @@ fn main() {
     chunk.push(Op::Add as Word);
     chunk.push(Op::Return as Word);
 
+    assert_eq!(chunk.len(), chunk_from_file.len());
+    assert_eq!(chunk, chunk_from_file);
+
     if std::env::args().len() == 2 {
         let args: Vec<String> = std::env::args().collect();
         let debug = args[1] == "debug";
@@ -99,4 +116,5 @@ fn main() {
         dissasemble_chunk(&chunk);
         println!("=====================");
     }
+    Ok(())
 }

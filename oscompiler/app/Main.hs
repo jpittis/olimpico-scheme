@@ -22,7 +22,7 @@ assembler = do
   input <- Text.readFile filename
   case assemble input of
     Left err  -> print err
-    Right asm -> mapM ppAssembler asm >> return ()
+    Right asm -> dumpAssembler asm "out.osb"
 
 ppAssembler :: Assembler -> IO ()
 ppAssembler (Labell str) = printf "@%s\n" str

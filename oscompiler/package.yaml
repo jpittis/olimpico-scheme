@@ -17,6 +17,8 @@ dependencies:
 - HUnit
 - containers
 - either
+- binary
+- bytestring
 
 library:
   source-dirs: src
