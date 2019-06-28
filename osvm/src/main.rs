@@ -5,7 +5,7 @@ extern crate num_derive;
 mod bytecode;
 mod interpreter;
 
-use std::time::{Instant};
+use std::time::Instant;
 
 use bytecode::{dissasemble_chunk, Chunk, Op, Word};
 use interpreter::Interpreter;
@@ -74,7 +74,11 @@ fn main() {
         let mut vm = Interpreter::new(chunk);
 
         let now = Instant::now();
-        vm.execute_all(debug);
+        if debug {
+            vm.execute_all_debug();
+        } else {
+            vm.execute_all();
+        }
         let duration = now.elapsed();
         println!("Duration: {:?}", duration);
 

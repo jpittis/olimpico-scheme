@@ -35,17 +35,29 @@ impl Interpreter {
         }
     }
 
-    pub fn execute_all(&mut self, debug: bool) {
+    pub fn execute_all(&mut self) {
         loop {
-            if debug {
-                println!("{:04X?}\t{:?}", self.ip, self.stack.last());
-            }
             if self.execute_next() {
                 return;
             }
         }
     }
 
+    pub fn step(&mut self) -> bool {
+        println!("{:04X?}\t{:?}", self.ip, self.stack.last());
+        self.execute_next()
+    }
+
+    pub fn execute_all_debug(&mut self) {
+        loop {
+            println!("{:04X?}\t{:?}", self.ip, self.stack.last());
+            if self.execute_next() {
+                return;
+            }
+        }
+    }
+
+    #[inline(always)]
     fn execute_next(&mut self) -> bool {
         match num::FromPrimitive::from_usize(self.chunk[self.ip]) {
             Some(op) => self.execute_op(op),
@@ -53,6 +65,7 @@ impl Interpreter {
         }
     }
 
+    #[inline(always)]
     fn execute_op(&mut self, op: Op) -> bool {
         match op {
             Op::Return => {
