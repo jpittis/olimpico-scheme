@@ -35,7 +35,8 @@ data Env = Env
   }
 
 fibScheme :: Text
-fibScheme = "(lambda (n) (if (< n 2) 1 (+ (fib (- n 1)) (fib (- n 2)))))"
+fibScheme = "(lambda (n) (if (= n 0) 0 (if (= n 1) 1 (+ (fib (- n 1)) (fib (- n 2)))))))"
+
 
 fibSexpr :: Sexpr
 fibSexpr = case parse sexpr "" fibScheme of
@@ -87,11 +88,15 @@ compileIf test consq alt = do
 
 compileFuncCall fname args = do
   argBlock <- concat <$> mapM compileSexpr args
-  return $ concat
-    [ [ Closure $ ClosureName fname ]
-    , argBlock
-    , [ Apply ]
-    ]
+  case fname of
+    "=" -> return $ concat [ argBlock, [ Equal ]]
+    "+" -> return $ concat [ argBlock, [ Add ]]
+    "-" -> return $ concat [ argBlock, [ Sub ]]
+    _ -> return $ concat
+      [ [ Closure $ ClosureName fname ]
+      , argBlock
+      , [ Apply ]
+      ]
 
 lookupSymbol :: Text -> Reader Env Int
 lookupSymbol s = asks (Map.lookup s . envSymbolLookup) >>= \case
