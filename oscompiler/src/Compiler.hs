@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 module Compiler
     ( fibCompile
+    , ppInst
     ) where
 
 import Data.Text (Text)
@@ -37,7 +38,6 @@ data Env = Env
 fibScheme :: Text
 fibScheme = "(lambda (n) (if (= n 0) 0 (if (= n 1) 1 (+ (fib (- n 1)) (fib (- n 2)))))))"
 
-
 fibSexpr :: Sexpr
 fibSexpr = case parse sexpr "" fibScheme of
   Right result -> result
@@ -48,6 +48,9 @@ fibCompile = runReader (compileSexpr fibSexpr) newEnv
   where
     newEnv :: Env
     newEnv = Env { envSymbolLookup = Map.empty }
+
+ppInst :: [Inst] -> IO ()
+ppInst asm = mapM print asm >> return ()
 
 compileSexpr :: Sexpr -> Reader Env [Inst]
 compileSexpr ast = case ast of
@@ -81,9 +84,9 @@ compileIf test consq alt = do
   altBlock <- compileSexpr alt
   return $ concat
     [ testBlock
-    , [ Jump $ length testBlock + length altBlock ]
-    , consqBlock
-    , altBlock
+    , [ Jump $ instLength testBlock + instLength consqBlock ]
+    , adjustOffset consqBlock (instLength testBlock + 2)
+    , adjustOffset altBlock (instLength testBlock + 2 + instLength consqBlock)
     ]
 
 compileFuncCall fname args = do
@@ -94,7 +97,7 @@ compileFuncCall fname args = do
     "-" -> return $ concat [ argBlock, [ Sub ]]
     _ -> return $ concat
       [ [ Closure $ ClosureName fname ]
-      , argBlock
+      , adjustOffset argBlock 2
       , [ Apply ]
       ]
 
@@ -102,3 +105,22 @@ lookupSymbol :: Text -> Reader Env Int
 lookupSymbol s = asks (Map.lookup s . envSymbolLookup) >>= \case
   Nothing -> error "symbol not found in env"
   Just i -> return i
+
+instLength :: [Inst] -> Int
+instLength = sum . map instSize
+
+instSize :: Inst -> Int
+instSize inst =
+  case inst of
+    Closure _ -> 2
+    Const _   -> 2
+    Access _  -> 2
+    Jump _    -> 2
+    _ -> 1
+
+adjustOffset :: [Inst] -> Int -> [Inst]
+adjustOffset asm n = map (addOffset n) asm
+  where
+    addOffset :: Int -> Inst -> Inst
+    addOffset n (Jump i) = Jump $ i + n
+    addOffset _ inst = inst
