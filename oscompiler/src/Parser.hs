@@ -21,7 +21,7 @@ data Sexpr =
   deriving (Show, Read, Eq)
 
 data Atom  =
-    Integer Integer
+    Integer Int
   | String  Text
   | Symbol  Text
   deriving (Show, Read, Eq)
