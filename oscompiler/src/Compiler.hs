@@ -3,6 +3,8 @@
 module Compiler
     ( fibCompile
     , ppInst
+    , fibProg
+    , fibDump
     ) where
 
 import Data.Text (Text)
@@ -10,6 +12,8 @@ import Text.Megaparsec (parse)
 import Control.Monad.Reader (Reader, runReader, asks, local)
 import Data.Map (Map)
 import qualified Data.Map as Map (empty, lookup, fromList, union)
+import qualified Data.Binary as Binary
+import qualified Data.ByteString.Lazy as ByteString (concat, writeFile)
 
 import Parser
 
@@ -49,6 +53,31 @@ fibCompile = runReader (compileSexpr fibSexpr) newEnv
     newEnv :: Env
     newEnv = Env { envSymbolLookup = Map.empty }
 
+fibProg :: [Inst]
+fibProg =
+  let prog    = concat [mainBlock, fibBlock]
+      nameMap = Map.fromList [("main", 0), ("fib", 6)] in
+  simplifyProg nameMap prog
+  where
+    fibBlock  = adjustOffset fibCompile 6
+    mainBlock =
+      [ Closure (ClosureName "fib")
+      , Const 30
+      , Apply
+      , Stop
+      ]
+
+fibDump = dump fibProg "fib.osb"
+
+simplifyProg :: Map Text Int -> [Inst] -> [Inst]
+simplifyProg nameMap prog = map (replaceName nameMap) prog
+  where
+    replaceName m (Closure (ClosureName ident)) =
+      case Map.lookup ident m of
+        Just offset -> Closure (ClosureOffset offset)
+        Nothing     -> error "offset not found"
+    replaceName m inst = inst
+
 ppInst :: [Inst] -> IO ()
 ppInst asm = mapM print asm >> return ()
 
@@ -79,14 +108,15 @@ compileLambda params body =
       _ -> error "param not a symbol"
 
 compileIf test consq alt = do
-  testBlock <- compileSexpr test
+  testBlock  <- compileSexpr test
   consqBlock <- compileSexpr consq
-  altBlock <- compileSexpr alt
+  altBlock   <- compileSexpr alt
   return $ concat
     [ testBlock
-    , [ Jump $ instLength testBlock + instLength consqBlock ]
+    , [ Jump $ instLength testBlock + instLength consqBlock + 3 ]
     , adjustOffset consqBlock (instLength testBlock + 2)
-    , adjustOffset altBlock (instLength testBlock + 2 + instLength consqBlock)
+    , [ Return ]
+    , adjustOffset altBlock (instLength testBlock + 3 + instLength consqBlock)
     ]
 
 compileFuncCall fname args = do
@@ -95,7 +125,7 @@ compileFuncCall fname args = do
     "=" -> return $ concat [ argBlock, [ Equal ]]
     "+" -> return $ concat [ argBlock, [ Add ]]
     "-" -> return $ concat [ argBlock, [ Sub ]]
-    _ -> return $ concat
+    _   -> return $ concat
       [ [ Closure $ ClosureName fname ]
       , adjustOffset argBlock 2
       , [ Apply ]
@@ -116,7 +146,7 @@ instSize inst =
     Const _   -> 2
     Access _  -> 2
     Jump _    -> 2
-    _ -> 1
+    _         -> 1
 
 adjustOffset :: [Inst] -> Int -> [Inst]
 adjustOffset asm n = map (addOffset n) asm
@@ -124,3 +154,23 @@ adjustOffset asm n = map (addOffset n) asm
     addOffset :: Int -> Inst -> Inst
     addOffset n (Jump i) = Jump $ i + n
     addOffset _ inst = inst
+
+dump :: [Inst] -> FilePath -> IO ()
+dump prog path =
+  outputBytecode path $ concatMap toBytecode prog
+  where
+    toBytecode :: Inst -> [Int]
+    toBytecode Return                           = [0]
+    toBytecode Equal                            = [1]
+    toBytecode Add                              = [2]
+    toBytecode Sub                              = [3]
+    toBytecode Apply                            = [7]
+    toBytecode Stop                             = [8]
+    toBytecode (Closure (ClosureOffset offset)) = [9,  offset]
+    toBytecode (Jump offset)                    = [10, offset]
+    toBytecode (Const int)                      = [11, int]
+    toBytecode (Access int)                     = [12, int]
+    outputBytecode :: FilePath -> [Int] -> IO ()
+    outputBytecode path bytecode =
+      ByteString.writeFile path (ByteString.concat $
+        map (Binary.encode . (fromIntegral :: Int -> Binary.Word64)) bytecode)
