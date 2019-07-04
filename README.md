@@ -1,15 +1,17 @@
 Just toying around with Lisp, compilers, interpreters, Haskell and Rust! The
 code quality is pretty terrible but I'm having lots of fun!
 
-## Done
+This repo includes the following:
 
 - Lisp tree walk interpreter.
 - Bytecode VM.
 - Assembler for bytecode VM.
-
-## Todo
-
 - Lisp compiler to bytecode.
+
+The compiler is the most hacky of all and is hardcoded to be able to compile
+the fib lambda rather than arbitrary programs. I learnt a bunch of stuff while
+working on this project and I decided to abandon it and start from scratch
+again once I read more theory.
 
 ## Relative Performance
 
@@ -60,3 +62,5 @@ than the tree walk interpreter.
   add
   return
 ```
+
+This is about 8 times slower than the equivalent Ruby program.
